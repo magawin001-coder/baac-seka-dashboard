@@ -162,14 +162,6 @@ div[role="radiogroup"] label:has(input:checked) p { color:#fff; font-weight:500;
 .card-list b { color:#38bdf8; }
 .spacer { height:30px; }
 
-.tl { display:grid; gap:10px; }
-.tl-item { display:flex; gap:16px; align-items:center; background:rgba(15,23,42,0.6); border:1px solid rgba(56,189,248,0.14); border-radius:16px; padding:12px 16px; transition:.25s; }
-.tl-date { min-width:64px; text-align:center; border-radius:12px; padding:6px 0; color:#fff; background:linear-gradient(135deg,#0284c7,#7c3aed); }
-.tl-date b { display:block; font-size:22px; line-height:1.1; }
-.tl-date span { font-size:11px; opacity:.85; }
-.tl-place { color:#f1f5f9; font-weight:500; }
-.tl-sub { color:#94a3b8; font-size:13px; }
-
 [data-testid="stPlotlyChart"], .stPlotlyChart { background:rgba(15,23,42,0.55); border:1px solid rgba(56,189,248,0.15); border-radius:22px; padding:10px; }
 [data-testid="stDataFrame"] { border:1px solid rgba(56,189,248,0.2); border-radius:16px; overflow:hidden; }
 [data-baseweb="select"] > div { background:rgba(15,23,42,0.85) !important; border-radius:14px !important; border-color:rgba(56,189,248,0.3) !important; }
@@ -230,7 +222,7 @@ schedule = [
 ]
 
 # =====================================================
-# PAGE 1 : ภาพรวม (มีเรดาร์แผนที่และตัวเลือกตำบล)
+# PAGE 1 : ภาพรวม
 # =====================================================
 if page == "🏠 ภาพรวม":
     section_head("OVERVIEW", "สรุปผลการดำเนินงานภาพรวม สาขาเซกา", "ข้อมูลอัปเดตเป็นปัจจุบัน (ปีบัญชี 2569)")
@@ -241,7 +233,6 @@ if page == "🏠 ภาพรวม":
         ("📍", "จุดบริการชุมชนโฮมสุข", f"{len(active)} จุด", "ครอบคลุมพื้นที่ 9 ตำบล"),
     ])
 
-    # กราฟแนวตั้งยอดรวมรายได้ FBI รายเดือน
     section_head("FBI TREND", "ภาพรวมยอดรวมรายได้ FBI (รายเดือน)", "เปรียบเทียบการเติบโตสะสมในแต่ละเดือนอย่างชัดเจน")
     f_total_overview = go.Figure(go.Bar(
         x=fbi_data["เดือน"], y=fbi_data["รวมรายได้ (บาท)"],
@@ -252,11 +243,7 @@ if page == "🏠 ภาพรวม":
     style_fig(f_total_overview, 400).update_yaxes(range=[0, fbi_data["รวมรายได้ (บาท)"].max() * 1.18])
     st.plotly_chart(f_total_overview, use_container_width=True, config=PLOT_CFG)
 
-    # -----------------------------------------------------
-    # ส่วนแผนที่เรดาร์และตัวเลือกตำบล
-    # -----------------------------------------------------
     section_head("AREA INSIGHT", "เรดาร์แผนที่ 3D และข้อมูลรายตำบล", "เลือกตำบลเพื่อดูสถานะจุดบริการและรายละเอียดในพื้นที่")
-    
     col_sel, _ = st.columns([1, 2])
     with col_sel:
         tambon_list = ["ทั้งหมด", "เซกา", "โสกก่าม", "ซาง", "ท่ากกแดง", "ท่าสะอาด", "น้ำจั้น", "บ้านต้อง", "ป่งไฮ", "หนองทุ่ม"]
@@ -320,31 +307,56 @@ if page == "🏠 ภาพรวม":
         st.plotly_chart(style_fig(fp), use_container_width=True, config=PLOT_CFG)
 
 # =====================================================
-# PAGE 2 : ดอกเบี้ย 15 เดือน
+# PAGE 2 : ดอกเบี้ย 15 เดือน (อัปเดตข้อมูล 6 เดือนใหม่ตามสั่ง)
 # =====================================================
 elif page == "📈 ดอกเบี้ย 15 เดือน":
     page_hero("📈 KPI เจาะลึก", 'ดอกเบี้ย <span class="grad">15 เดือน</span>',
-              "วิเคราะห์สถิติอัตราดอกเบี้ยและผลสัมฤทธิ์รายเดือน")
+              "เปรียบเทียบอัตราผลงาน 6 เดือน และวิเคราะห์อัตราการเติบโตรายเดือน")
 
-    months_i = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
-                "ม.ค. (ปีถัดไป)", "ก.พ. (ปีถัดไป)", "มี.ค. (ปีถัดไป)"]
-    rates = [3.2, 3.4, 3.5, 3.8, 4.0, 4.2, 4.1, 4.3, 4.5, 4.6, 4.8, 5.0, 5.1, 5.3, 5.5]
-    di = pd.DataFrame({"เดือน": months_i, "อัตราดอกเบี้ย (%)": rates})
+    # ข้อมูล 6 เดือนตามที่ผู้ใช้กำหนด
+    months_i = ["เดือน 5", "เดือน 6", "เดือน 7", "เดือน 8", "เดือน 9", "เดือน 10"]
+    rates = [25.98, 21.84, 25.98, 30.00, 38.42, 42.87]
+    
+    di = pd.DataFrame({"เดือน": months_i, "อัตรา (%)": rates})
+    # คำนวณอัตราการเติบโตเทียบกับเดือนก่อนหน้า (Growth Rate MoM)
+    di["เติบโตเทียบเดือนก่อน (%)"] = di["อัตรา (%)"].diff().fillna(0)
 
     kpi_grid([
-        ("📊", "อัตราเฉลี่ยรวม", f"{sum(rates)/len(rates):.2f}%", "▲ +0.4% จากงวดก่อน"),
-        ("🚀", "สูงสุด (Peak)", f"{max(rates):.2f}%", "มี.ค. (ปีถัดไป)"),
-        ("🎯", "สถานะเป้าหมาย", "ผ่านเกณฑ์", "🟢 เติบโตต่อเนื่อง"),
+        ("📊", "อัตราเฉลี่ย 6 เดือน", f"{sum(rates)/len(rates):.2f}%", "ภาพรวมผลงานสะสม"),
+        ("🚀", "สูงสุด (เดือน 10)", f"{max(rates):.2f}%", "▲ เติบโตสูงสุดในงวด"),
+        ("📈", "อัตราเติบโตล่าสุด", f"+{di['เติบโตเทียบเดือนก่อน (%)'].iloc[-1]:.2f}%", "เทียบกับเดือน 9"),
     ])
 
-    section_head("TREND", "แนวโน้มอัตราดอกเบี้ย")
-    fm = go.Figure()
-    fm.add_trace(go.Bar(x=di["เดือน"], y=di["อัตราดอกเบี้ย (%)"], name="อัตรา (%)",
-                        marker_color="rgba(56,189,248,0.55)", marker_line_color="#38bdf8", marker_line_width=1))
-    fm.add_trace(go.Scatter(x=di["เดือน"], y=di["อัตราดอกเบี้ย (%)"], name="แนวโน้ม",
-                            mode="lines+markers", line=dict(color="#ec4899", width=3, shape="spline"),
-                            marker=dict(size=8, color="#fff")))
-    st.plotly_chart(style_fig(fm, 420), use_container_width=True, config=PLOT_CFG)
+    section_head("COMPARE 6 MONTHS", "กราฟเปรียบเทียบอัตรา (%) 6 เดือน", "แสดงสัดส่วนผลงานรายเดือนอย่างชัดเจน")
+    
+    f_rate = go.Figure(go.Bar(
+        x=di["เดือน"], y=di["อัตรา (%)"],
+        marker=dict(color=di["อัตรา (%)"], colorscale="Blues", showscale=False, line=dict(color="#38bdf8", width=2)),
+        text=[f"{v:.2f}%" for v in di["อัตรา (%)"]], textposition="outside"
+    ))
+    f_rate.update_layout(title="สัดส่วนอัตรา (%) ประจำแต่ละเดือน", showlegend=False)
+    style_fig(f_rate, 400).update_yaxes(range=[0, di["อัตรา (%)"].max() * 1.2])
+    st.plotly_chart(f_rate, use_container_width=True, config=PLOT_CFG)
+
+    section_head("GROWTH RATE", "การเติบโต (Growth Rate) ในแต่ละเดือน", "วิเคราะห์การเปลี่ยนแปลงเพิ่มขึ้น/ลดลงเทียบกับเดือนก่อนหน้า")
+    
+    f_growth = go.Figure()
+    f_growth.add_trace(go.Scatter(
+        x=di["เดือน"], y=di["อัตรา (%)"], name="เส้นแนวโน้มอัตรา (%)",
+        mode="lines+markers", line=dict(color="#38bdf8", width=3, shape="spline"),
+        marker=dict(size=10, color="#fff")
+    ))
+    f_growth.add_trace(go.Bar(
+        x=di["เดือน"], y=di["เติบโตเทียบเดือนก่อน (%)"], name="การเติบโต MoM (%)",
+        marker_color=["#34d399" if v >= 0 else "#ec4899" for v in di["เติบโตเทียบเดือนก่อน (%)"]],
+        text=[f"{v:+.2f}%" if v != 0 else "0.00%" for v in di["เติบโตเทียบเดือนก่อน (%)"]], textposition="auto"
+    ))
+    f_growth.update_layout(barmode="group", title="กราฟแสดงการเติบโตในแต่ละเดือน (%)")
+    style_fig(f_growth, 420)
+    st.plotly_chart(f_growth, use_container_width=True, config=PLOT_CFG)
+
+    section_head("DETAIL", "ตารางสรุปข้อมูลอัตราและการเติบโต 6 เดือน")
+    st.dataframe(di, use_container_width=True, hide_index=True)
 
 # =====================================================
 # PAGE 3 : รายได้ FBI
